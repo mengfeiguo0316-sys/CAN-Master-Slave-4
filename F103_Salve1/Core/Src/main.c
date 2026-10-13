@@ -87,10 +87,11 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
- // MX_CAN_Init();
+  MX_CAN_Init();
   /* USER CODE BEGIN 2 */
-	CAN_ConfigInit();//��ʼ��
-	HAL_CAN_Start(&hcan);//ʹ��
+	CAN_ConfigInit();//初始化
+	HAL_CAN_Start(&hcan);//使能
+  HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING);//开启FIFO0收报中断
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -100,8 +101,14 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    if (CAN_RxFlag)              // 收到新报文了
+	  {
+		  CAN_RxFlag = 0;          // 先清标志
+		  
+	  }
 	  CAN_Send();
 	  HAL_Delay(500);
+
 	  
   }
   /* USER CODE END 3 */
