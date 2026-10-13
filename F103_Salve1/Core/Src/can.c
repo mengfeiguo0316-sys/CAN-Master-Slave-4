@@ -88,6 +88,9 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
 
     __HAL_AFIO_REMAP_CAN1_2();
 
+    /* CAN1 interrupt Init */
+    HAL_NVIC_SetPriority(USB_LP_CAN1_RX0_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(USB_LP_CAN1_RX0_IRQn);
   /* USER CODE BEGIN CAN1_MspInit 1 */
 
   /* USER CODE END CAN1_MspInit 1 */
@@ -111,6 +114,8 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef* canHandle)
     */
     HAL_GPIO_DeInit(GPIOB, GPIO_PIN_8|GPIO_PIN_9);
 
+    /* CAN1 interrupt Deinit */
+    HAL_NVIC_DisableIRQ(USB_LP_CAN1_RX0_IRQn);
   /* USER CODE BEGIN CAN1_MspDeInit 1 */
 
   /* USER CODE END CAN1_MspDeInit 1 */
@@ -119,33 +124,33 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef* canHandle)
 
 /* USER CODE BEGIN 1 */
 //CAN_FilterTypeDef
-//¹ıÂËÆ÷ÉèÖÃ½á¹¹Ìå
+//è¿‡æ»¤å™¨è®¾ç½®ç»“æ„ä½“
 static void CAN_Filter_Config(void)
 {
 	CAN_FilterTypeDef CAN_FilterInitStructure;
 	
-	CAN_FilterInitStructure.FilterBank = 0;//Ñ¡Ôñ¹ıÂËÆ÷0
-	CAN_FilterInitStructure.FilterMode = CAN_FILTERMODE_IDMASK;//Ñ¡Ôñ¹ıÂËÆ÷µÄÆÁ±ÎÄ£Ê½
-	CAN_FilterInitStructure.FilterScale = CAN_FILTERSCALE_32BIT;//Ñ¡Ôñ¹ıÂËÆ÷µÄÎ»¿í
+	CAN_FilterInitStructure.FilterBank = 0;//é€‰æ‹©è¿‡æ»¤å™¨0
+	CAN_FilterInitStructure.FilterMode = CAN_FILTERMODE_IDMASK;//é€‰æ‹©è¿‡æ»¤å™¨çš„å±è”½æ¨¡å¼
+	CAN_FilterInitStructure.FilterScale = CAN_FILTERSCALE_32BIT;//é€‰æ‹©è¿‡æ»¤å™¨çš„ä½å®½
 	
 	CAN_FilterInitStructure.FilterIdHigh = ((((uint32_t)0X1314 << 3)|
-		CAN_ID_EXT|CAN_RTR_DATA)&0XFFFF0000) >> 16;		//Òª¹ıÂËµÄ¸ßÊ®ÁùÎ»
+		CAN_ID_EXT|CAN_RTR_DATA)&0XFFFF0000) >> 16;		//è¦è¿‡æ»¤çš„é«˜åå…­ä½
 	
 	CAN_FilterInitStructure.FilterIdLow = (((uint32_t)0X1314 << 3)|
-		CAN_ID_EXT|CAN_RTR_DATA)&0XFFFF;		//Òª¹ıÂËµÄµÍÊ®ÁùÎ»
+		CAN_ID_EXT|CAN_RTR_DATA)&0XFFFF;		//è¦è¿‡æ»¤çš„ä½åå…­ä½
 	
 	CAN_FilterInitStructure.FilterMaskIdHigh = 0XFFFF;
-	CAN_FilterInitStructure.FilterMaskIdLow = 0XFFFF;//ÉèÖÃ¹ıÂËÆ÷µÄÃ¿Ò»Î»¶¼±ØĞëÆ¥Åä
+	CAN_FilterInitStructure.FilterMaskIdLow = 0XFFFF;//è®¾ç½®è¿‡æ»¤å™¨çš„æ¯ä¸€ä½éƒ½å¿…é¡»åŒ¹é…
 	
-	CAN_FilterInitStructure.FilterFIFOAssignment = CAN_FilterFIFO0;//Æ¥ÅäFIFO0
-	CAN_FilterInitStructure.FilterActivation = ENABLE;//Ê¹ÄÜ
+	CAN_FilterInitStructure.FilterFIFOAssignment = CAN_FilterFIFO0;//åŒ¹é…FIFO0
+	CAN_FilterInitStructure.FilterActivation = ENABLE;//ä½¿èƒ½
 	
-	HAL_CAN_ConfigFilter(&hcan,&CAN_FilterInitStructure);//µ÷ÓÃHAL¿â½Ó¿Ú½«ÅäÖÃĞ´ÈëCAN
+	HAL_CAN_ConfigFilter(&hcan,&CAN_FilterInitStructure);//è°ƒç”¨HALåº“æ¥å£å°†é…ç½®å†™å…¥CAN
 	
 }
 
 
-//³õÊ¼»¯
+//åˆå§‹åŒ–
 void CAN_ConfigInit(void)
 {
 	MX_CAN_Init();
@@ -153,28 +158,46 @@ void CAN_ConfigInit(void)
 	
 }
 
-//CAN·¢ËÍ
+//CANå‘é€
 CAN_TxHeaderTypeDef CAN_HandleTxMsg;
 void CAN_Send(void)
 {
 	uint32_t TxMailbox;
 	uint8_t temp[8] = {1,2,3,4,5,6,7,8};
 	
-	CAN_HandleTxMsg.StdId = 0X00;
-	CAN_HandleTxMsg.ExtId = 0X1314;			//Ê¹ÓÃÀ©Õ¹ID
-	CAN_HandleTxMsg.IDE = CAN_ID_EXT;		//Ê¹ÓÃÀ©Õ¹Ä£Ê½
-	CAN_HandleTxMsg.RTR = CAN_RTR_DATA;		//·¢ËÍµÄÊÇÊı¾İÖ¡
-	CAN_HandleTxMsg.DLC = 8;				//Êı¾İ³¤¶È
+	CAN_HandleTxMsg.StdId = 0X00;       //æ ‡å‡†å¸§ID
+	CAN_HandleTxMsg.ExtId = 0X1314;			//ä½¿ç”¨æ‰©å±•ID
+	CAN_HandleTxMsg.IDE = CAN_ID_EXT;		//ä½¿ç”¨æ‰©å±•æ¨¡å¼
+	CAN_HandleTxMsg.RTR = CAN_RTR_DATA;		//å‘é€çš„æ˜¯æ•°æ®å¸§
+	CAN_HandleTxMsg.DLC = 8;				//æ•°æ®é•¿åº¦
 	
-	HAL_CAN_AddTxMessage(&hcan,&CAN_HandleTxMsg,temp,&TxMailbox);//µ÷ÓÃHAL¿â½Ó¿Ú½«ÅäÖÃĞ´ÈëCAN
+	HAL_CAN_AddTxMessage(&hcan,&CAN_HandleTxMsg,temp,&TxMailbox);//è°ƒç”¨HALåº“æ¥å£å°†é…ç½®å†™å…¥CAN
 }
 
 
+//CANæ¥æ”¶
+volatile uint8_t  CAN_RxFlag = 0;      // æ”¶åˆ°æ–°æŠ¥æ–‡çš„æ ‡å¿—ï¼ˆvolatile å¿…é¡»ï¼ï¼‰
+uint8_t           CAN_RxData[8] = {0}; // æ¥æ”¶æ•°æ®ç¼“å†²åŒº
+CAN_RxHeaderTypeDef CAN_RxHeader;      // æŠ¥æ–‡å¤´ï¼ˆIDã€DLC ç­‰ï¼‰
+
+// â”€â”€ CAN æ¥æ”¶ä¸­æ–­å›è°ƒ â”€â”€
+void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
+{
+    CAN_RxHeaderTypeDef rxHeader;      // å±€éƒ¨å˜é‡ï¼Œç”¨ 2a çš„å…¨å±€ä¹Ÿè¡Œ
+    uint8_t rxData[8];
+
+    // â‘  ä» FIFO0 æŠŠæœ€æ—©çš„ä¸€å¸§å–å‡ºæ¥ï¼ˆè¾“å‡ºå‚æ•°ï¼šHAL å¸®ä½ å¡«å¥½ï¼‰
+    if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rxHeader, rxData) == HAL_OK)
+    {
+        // â‘¡ æš‚å­˜ï¼ˆ8 å­—èŠ‚å›ºå®šæ‹·ï¼ŒDLC å¯èƒ½å°äº 8ï¼‰
+        for (uint8_t i = 0; i < 8; i++) {
+            CAN_RxData[i] = rxData[i];
+        }
+        CAN_RxHeader = rxHeader;
+
+        // â‘¢ åªç½®æ ‡å¿—ï¼Œä¸åšåˆ«çš„äº‹
+        CAN_RxFlag = 1;
+    }
+}
 /* USER CODE END 1 */
-
-
-
-
-
-
 

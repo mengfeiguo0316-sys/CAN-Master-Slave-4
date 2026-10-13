@@ -43,6 +43,11 @@ void MX_CAN_Init(void);
 /* USER CODE BEGIN Prototypes */
 void CAN_ConfigInit(void);
 void CAN_Send(void);
+
+void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
+extern volatile uint8_t CAN_RxFlag;
+extern uint8_t CAN_RxData[8];
+extern CAN_RxHeaderTypeDef CAN_RxHeader;
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus

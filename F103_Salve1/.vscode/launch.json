@@ -9,7 +9,7 @@
       "request": "launch",
       "cwd": "${workspaceFolder}",
 
-      // Keil 编译产物（ARMCC 的 .axf，Cortex-Debug 可读取符号）
+      // CMake 构建产物（GNU 工具链生成的 ELF）
       "executable": "${workspaceFolder}/build/Debug/CAN_Send.elf",
 
       // 调试服务器类型：CMSIS-DAP 走 OpenOCD
@@ -23,6 +23,9 @@
 
       // 启动后停在 main 函数入口
       "runToEntryPoint": "main",
+
+      // 按 F5 时先自动编译，避免烧进旧固件
+      "preLaunchTask": "Build (Debug)",
 
       // 不打印 GDB 底层冗余日志（排障时可临时改成 "raw"）
       "showDevDebugOutput": "none"
@@ -42,6 +45,9 @@
         "interface/cmsis-dap.cfg",
         "target/stm32f1x.cfg"
       ],
+
+      // 按 F5 时先自动编译，确保符号与固件一致
+      "preLaunchTask": "Build (Debug)",
       "showDevDebugOutput": "none"
     }
   ]
