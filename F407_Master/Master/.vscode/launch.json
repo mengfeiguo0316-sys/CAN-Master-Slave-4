@@ -1,0 +1,27 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      /* 1. 基础配置与启动类型 */
+      "name": "Cortex Debug (CMSIS-DAP)",
+      "type": "cortex-debug",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+
+      /* 2. 固件目标路径 */
+      //"executable": "${workspaceFolder}/build/Debug/test.elf",//调试用
+      "executable": "${workspaceFolder}/build/Release/Master.elf",//烧录用
+
+      /* 3. 调试服务与硬件脚本 (针对 CMSIS-DAP) */
+      "servertype": "openocd",
+      "configFiles": [
+        "interface/cmsis-dap.cfg",     // 调试器驱动脚本
+        "target/stm32f4x.cfg"          // 芯片系列脚本
+      ],
+
+      /* 4. 运行行为控制 */
+      "runToEntryPoint": "main",       // 连接后自动暂停在 main 函数入口
+      "showDevDebugOutput": "none",     // 隐藏 GDB 底层冗余交互日志
+    }
+  ]
+}

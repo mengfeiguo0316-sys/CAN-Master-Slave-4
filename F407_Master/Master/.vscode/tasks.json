@@ -1,0 +1,23 @@
+	{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Flash Program (DAPLink)",
+      "type": "shell",
+      "command": "openocd",
+      "args": [
+        "-f", "interface/cmsis-dap.cfg",
+        "-f", "target/stm32f4x.cfg",
+        "-c", "program build/Release/Master.elf verify reset exit"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "group": {
+        "kind": "build"
+      }
+    }
+  ]
+}
+//文件名叫tasks.json！！！，注意芯片型号和烧录文件名称
