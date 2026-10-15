@@ -21,7 +21,7 @@
 #include "can.h"
 
 /* USER CODE BEGIN 0 */
-
+static void Fliter_config(void);
 /* USER CODE END 0 */
 
 CAN_HandleTypeDef hcan1;
@@ -54,6 +54,8 @@ void MX_CAN1_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN CAN1_Init 2 */
+  Fliter_config();
+  HAL_CAN_Start(&hcan1);
 
   /* USER CODE END CAN1_Init 2 */
 
@@ -131,6 +133,21 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef* canHandle)
 }
 
 /* USER CODE BEGIN 1 */
+
+static void Fliter_config(void)
+{
+  CAN_FilterTypeDef Fliter_struct={0};
+
+  Fliter_struct.FilterBank=1;
+  Fliter_struct.SlaveStartFilterBank=14;
+  Fliter_struct.FilterActivation=CAN_FILTER_ENABLE;
+  Fliter_struct.FilterFIFOAssignment=CAN_FILTER_FIFO0;
+  Fliter_struct.FilterMode=CAN_FILTERMODE_IDMASK;
+  Fliter_struct.FilterScale=CAN_FILTERSCALE_16BIT;
+
+  //uint32_t filter_id=0x00000000;
+  HAL_CAN_ConfigFilter(&hcan1,&Fliter_struct);
+}
 
 /* USER CODE END 1 */
 
