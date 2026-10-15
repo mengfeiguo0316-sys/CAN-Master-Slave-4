@@ -26,7 +26,8 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN TD */
-
+volatile uint8_t cnt = 0;
+volatile uint8_t ok = 0;
 /* USER CODE END TD */
 
 /* Private define ------------------------------------------------------------*/
@@ -187,7 +188,12 @@ void SysTick_Handler(void)
   /* USER CODE END SysTick_IRQn 0 */
   HAL_IncTick();
   /* USER CODE BEGIN SysTick_IRQn 1 */
-
+	cnt++;
+	if(cnt == 10)
+	{
+		cnt = 0;
+		ok = 1;
+	}
   /* USER CODE END SysTick_IRQn 1 */
 }
 
