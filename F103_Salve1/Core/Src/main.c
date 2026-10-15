@@ -19,11 +19,16 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "can.h"
+#include "tim.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "Getspeed.h"
+#include "stdio.h"
+#include "PID.h"
+#include "loop.h"
+#include <stdlib.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -88,10 +93,23 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_CAN_Init();
+  MX_TIM1_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
+  //CAN 的初始化
 	CAN_ConfigInit();//初始化
 	HAL_CAN_Start(&hcan);//使能
   HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING);//开启FIFO0收报中断
+  
+  //电机的初始化
+	HAL_TIM_Encoder_Start(&htim1, TIM_CHANNEL_ALL);//打开TIM1的全部编码器通道
+	
+	PWM_init();//初始化pwm
+	Mcinit();//初始化脉冲计数
+	uint32_t time = 0;
+	
+	PID_init(&PID[0],2.0f,0.2f,0.0f);//初始化PID
+	pos_kp(&PID[0],1.0f);//设置位置环的KP
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -101,14 +119,19 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    if (CAN_RxFlag)              // 收到新报文了
+	  
+//    if (CAN_RxFlag)              // 收到新报文了
+//	  {
+//		 CAN_RxFlag = 0;          // 先清标志
+//		  
+//	  }
+//	  CAN_Send();
+	  
+	  if(ok == 1)
 	  {
-		  CAN_RxFlag = 0;          // 先清标志
-		  
+			ok = 0;
+			Speed_Pos_loop(1,180.0f,0.0f);//(位置环开关,目标位置,目标速度)
 	  }
-	  CAN_Send();
-	  HAL_Delay(500);
-
 	  
   }
   /* USER CODE END 3 */
