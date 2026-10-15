@@ -14,12 +14,16 @@
 #define CAN_ID_CMD_MOTOR_CD   0x101   // 电机换向
 
 // 远程动态微调 PID 参数, 通过 CAN 指令进行增减 幅度为0.01
-#define CAN_ID_CMD_PID_PI     0x102   
-#define CAN_ID_CMD_PID_PD     0x103   
-#define CAN_ID_CMD_PID_II     0x104   
-#define CAN_ID_CMD_PID_ID     0x105  
-#define CAN_ID_CMD_PID_DI     0x106   
-#define CAN_ID_CMD_PID_DD     0x107  
+#define CAN_ID_CMD_PID_PSET     0x102   
+#define CAN_ID_CMD_PID_ISET     0x103   
+#define CAN_ID_CMD_PID_DSET     0x104   
+
+#define CAN_ID_CMD_TARGET_SPEED     0x108   
+#define CAN_ID_CMD_TARGET_POSITION     0x109
+
+#define CAN_ID_CMD_SPEEDLOOP     0x10A  
+#define CAN_ID_CMD_POSITIONLOOP    0x10B
+#define CAN_ID_CMD_DOUBLELOOP    0x10C
 
 // 状态反馈类：电机板 -> 控制板 (中优先级: 0x200 ~ 0x2FF)
 #define CAN_ID_FB_MOTOR_STATE   0x201   //电机双环实时状态反馈 (转速,位置,状态是否正常等)
@@ -33,9 +37,10 @@
  * ========================================================================== */
 // 电机控制模式
 typedef enum {
-    MOTOR_MODE_STOP       = 0x00, // 停机释放 (失能/自由停止)
+    MOTOR_MODE_STOP       = 0x00, // 停机释放 (失能/自由停止/刹车)
     MOTOR_MODE_SPEED      = 0x01, // 单速度环控制
-    MOTOR_MODE_POS_SPEED  = 0x02, // 位置-速度双环控制
+    MOTOR_MODE_POSITION   = 0x02, // 单位置环控制
+    MOTOR_MODE_POS_SPEED  = 0x03, // 位置-速度双环控制
 } MotorCtrlMode_e;
 
 // 系统警告与故障状态码 (可按位或组合，也可作枚举)
