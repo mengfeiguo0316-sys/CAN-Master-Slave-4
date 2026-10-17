@@ -51,6 +51,8 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
     ${CMAKE_CURRENT_SOURCE_DIR}/../Shared_Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/BSP/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/Middleware/Inc
 )
 
 
@@ -58,6 +60,13 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
 target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined symbols
 )
+
+# Add BSP sources
+file(GLOB BSP_SOURCES CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/BSP/Src/*.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Middleware/Src/*.c"
+)
+target_sources(${CMAKE_PROJECT_NAME} PRIVATE ${BSP_SOURCES})
 
 # Remove wrong libob.a library dependency when using cpp files
 list(REMOVE_ITEM CMAKE_C_IMPLICIT_LINK_LIBRARIES ob)

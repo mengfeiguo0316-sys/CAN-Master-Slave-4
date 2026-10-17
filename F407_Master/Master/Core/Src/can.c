@@ -21,7 +21,7 @@
 #include "can.h"
 
 /* USER CODE BEGIN 0 */
-static void Fliter_config(void);
+static void CAN_Filter_Config(void);
 /* USER CODE END 0 */
 
 CAN_HandleTypeDef hcan1;
@@ -54,8 +54,15 @@ void MX_CAN1_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN CAN1_Init 2 */
-  Fliter_config();
-  HAL_CAN_Start(&hcan1);
+  CAN_Filter_Config();
+  if (HAL_CAN_Start(&hcan1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK)
+  {
+    Error_Handler();
+  }
 
   /* USER CODE END CAN1_Init 2 */
 
@@ -74,10 +81,10 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
     __HAL_RCC_CAN1_CLK_ENABLE();
 
     __HAL_RCC_GPIOI_CLK_ENABLE();
-    __HAL_RCC_GPIOA_CLK_ENABLE();
+    __HAL_RCC_GPIOB_CLK_ENABLE();
     /**CAN1 GPIO Configuration
     PI9     ------> CAN1_RX
-    PA12     ------> CAN1_TX
+    PB9     ------> CAN1_TX
     */
     GPIO_InitStruct.Pin = GPIO_PIN_9;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
@@ -86,12 +93,12 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
     GPIO_InitStruct.Alternate = GPIO_AF9_CAN1;
     HAL_GPIO_Init(GPIOI, &GPIO_InitStruct);
 
-    GPIO_InitStruct.Pin = GPIO_PIN_12;
+    GPIO_InitStruct.Pin = GPIO_PIN_9;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
     GPIO_InitStruct.Alternate = GPIO_AF9_CAN1;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
     /* CAN1 interrupt Init */
     HAL_NVIC_SetPriority(CAN1_TX_IRQn, 0, 0);
@@ -117,11 +124,11 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef* canHandle)
 
     /**CAN1 GPIO Configuration
     PI9     ------> CAN1_RX
-    PA12     ------> CAN1_TX
+    PB9     ------> CAN1_TX
     */
     HAL_GPIO_DeInit(GPIOI, GPIO_PIN_9);
 
-    HAL_GPIO_DeInit(GPIOA, GPIO_PIN_12);
+    HAL_GPIO_DeInit(GPIOB, GPIO_PIN_9);
 
     /* CAN1 interrupt Deinit */
     HAL_NVIC_DisableIRQ(CAN1_TX_IRQn);
@@ -134,19 +141,31 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef* canHandle)
 
 /* USER CODE BEGIN 1 */
 
-static void Fliter_config(void)
+static void CAN_Filter_Config(void)
 {
-  CAN_FilterTypeDef Fliter_struct={0};
+  CAN_FilterTypeDef CAN_FilterInitStructure={0};
 
-  Fliter_struct.FilterBank=1;
-  Fliter_struct.SlaveStartFilterBank=14;
-  Fliter_struct.FilterActivation=CAN_FILTER_ENABLE;
-  Fliter_struct.FilterFIFOAssignment=CAN_FILTER_FIFO0;
-  Fliter_struct.FilterMode=CAN_FILTERMODE_IDMASK;
-  Fliter_struct.FilterScale=CAN_FILTERSCALE_16BIT;
+  CAN_FilterInitStructure.FilterBank = 0;                          
+  CAN_FilterInitStructure.FilterMode = CAN_FILTERMODE_IDMASK;      
+  CAN_FilterInitStructure.FilterScale = CAN_FILTERSCALE_32BIT;     
+  CAN_FilterInitStructure.FilterFIFOAssignment = CAN_FILTER_FIFO0; 
+  CAN_FilterInitStructure.FilterActivation = CAN_FILTER_ENABLE;    
+  CAN_FilterInitStructure.SlaveStartFilterBank = 14; // 双CAN系列配置,3号开始归CAN2,简单说：就是划地盘的线
 
-  //uint32_t filter_id=0x00000000;
-  HAL_CAN_ConfigFilter(&hcan1,&Fliter_struct);
+  // 筛选扩展远程帧 ID: 0x1FFFFFFF
+  uint32_t id_reg = ((uint32_t)0x1FFFFFFF << 3) | CAN_ID_EXT | CAN_RTR_DATA;
+  CAN_FilterInitStructure.FilterIdHigh = (uint16_t)(id_reg >> 16);
+  CAN_FilterInitStructure.FilterIdLow = (uint16_t)(id_reg & 0xFFFF);      
+
+  //CAN_FilterInitStructure.FilterMaskIdHigh = 0xFFFF;
+  //CAN_FilterInitStructure.FilterMaskIdLow = 0xFFFF;
+
+  // 临时测试：接受所有帧（mask 全部清零 = 任何位都不比）
+  CAN_FilterInitStructure.FilterMaskIdHigh = 0x0000;
+  CAN_FilterInitStructure.FilterMaskIdLow  = 0x0000;
+
+
+  HAL_CAN_ConfigFilter(&hcan1, &CAN_FilterInitStructure);
 }
 
 /* USER CODE END 1 */

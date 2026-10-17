@@ -24,7 +24,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "stm32f4xx_it.h"
+#include "bsp_led.h"
+#include "bsp_key.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -91,7 +93,7 @@ int main(void)
   MX_CAN1_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-
+  BSP_LED_Init();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -101,7 +103,12 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    if(BSP_KEY_Scan(KEY_ID_0) == KEY_SHORT)
+    {
+        BSP_LED_Toggle(LED_RED);
+    }
   }
+
   /* USER CODE END 3 */
 }
 
