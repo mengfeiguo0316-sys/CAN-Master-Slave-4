@@ -120,13 +120,7 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	  
-//    if (CAN_RxFlag)              // 收到新报文了
-//	  {
-//		 CAN_RxFlag = 0;          // 先清标志
-//		  
-//	  }
-//	  CAN_Send();
-	  
+	  //CAN_Rx_Process();
 	  if(ok == 1)
 	  {
 			ok = 0;

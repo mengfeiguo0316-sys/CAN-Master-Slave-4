@@ -19,10 +19,10 @@
 #define CAN_ID_CMD_PID_DSET     0x104   
 
 #define CAN_ID_CMD_TARGET_SPEED     0x108   
-#define CAN_ID_CMD_TARGET_POSITION     0x109
+#define CAN_ID_CMD_TARGET_POSITION  0x109
 
 #define CAN_ID_CMD_SPEEDLOOP     0x10A  
-#define CAN_ID_CMD_POSITIONLOOP    0x10B
+#define CAN_ID_CMD_POSITIONLOOP  0x10B
 #define CAN_ID_CMD_DOUBLELOOP    0x10C
 
 // 状态反馈类：电机板 -> 控制板 (中优先级: 0x200 ~ 0x2FF)
