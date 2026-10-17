@@ -133,14 +133,11 @@ static void CAN_Filter_Config(void)
 	CAN_FilterInitStructure.FilterMode = CAN_FILTERMODE_IDMASK;//选择过滤器的屏蔽模式
 	CAN_FilterInitStructure.FilterScale = CAN_FILTERSCALE_32BIT;//选择过滤器的位宽
 	
-	CAN_FilterInitStructure.FilterIdHigh = ((((uint32_t)0X1314 << 3)|
-		CAN_ID_EXT|CAN_RTR_DATA)&0XFFFF0000) >> 16;		//要过滤的高十六位
-	
-	CAN_FilterInitStructure.FilterIdLow = (((uint32_t)0X1314 << 3)|
-		CAN_ID_EXT|CAN_RTR_DATA)&0XFFFF;		//要过滤的低十六位
-	
-	CAN_FilterInitStructure.FilterMaskIdHigh = 0XFFFF;
-	CAN_FilterInitStructure.FilterMaskIdLow = 0XFFFF;//设置过滤器的每一位都必须匹配
+	// ID 和 掩码全部设为 0，代表不筛选任何位，接收所有发过来的标准帧/扩展帧
+  CAN_FilterInitStructure.FilterIdHigh = 0x0000;
+  CAN_FilterInitStructure.FilterIdLow  = 0x0000;
+  CAN_FilterInitStructure.FilterMaskIdHigh = 0x0000;
+  CAN_FilterInitStructure.FilterMaskIdLow  = 0x0000;
 	
 	CAN_FilterInitStructure.FilterFIFOAssignment = CAN_FilterFIFO0;//匹配FIFO0
 	CAN_FilterInitStructure.FilterActivation = ENABLE;//使能
@@ -160,44 +157,147 @@ void CAN_ConfigInit(void)
 
 //CAN发送
 CAN_TxHeaderTypeDef CAN_HandleTxMsg;
-void CAN_Send(void)
+//1.发送数据函数
+void CAN_Send_Data(uint32_t id, uint8_t *data, uint8_t len)
 {
 	uint32_t TxMailbox;
-	uint8_t temp[8] = {1,2,3,4,5,6,7,8};
 	
-	CAN_HandleTxMsg.StdId = 0X00;       //标准帧ID
-	CAN_HandleTxMsg.ExtId = 0X1314;			//使用扩展ID
-	CAN_HandleTxMsg.IDE = CAN_ID_EXT;		//使用扩展模式
-	CAN_HandleTxMsg.RTR = CAN_RTR_DATA;		//发送的是数据帧
-	CAN_HandleTxMsg.DLC = 8;				//数据长度
-	
-	HAL_CAN_AddTxMessage(&hcan,&CAN_HandleTxMsg,temp,&TxMailbox);//调用HAL库接口将配置写入CAN
+	CAN_HandleTxMsg.StdId = id;         //标准帧ID
+	CAN_HandleTxMsg.ExtId = 0X00;			  //标准帧不使用 ExtId
+	CAN_HandleTxMsg.IDE = CAN_ID_STD;		//使用标准模式
+	CAN_HandleTxMsg.RTR = CAN_RTR_DATA;	//发送的是数据帧
+	CAN_HandleTxMsg.DLC = len;				    //数据长度
+	CAN_HandleTxMsg.TransmitGlobalTime = DISABLE;//关闭“发送全局时间戳”功能
+
+  uint32_t timeout = 0xFFFF; // 超时计数
+  while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
+  {
+    if (timeout-- == 0) return; // 如果等太久还没空位（说明总线断开了），直接退出不卡死程序
+  }
+
+	HAL_CAN_AddTxMessage(&hcan,&CAN_HandleTxMsg,data,&TxMailbox);//调用HAL库接口将配置写入CAN
+}
+
+// 2.发远程帧函数
+void CAN_Send_Remote(uint32_t id, uint8_t len)
+{
+  uint32_t TxMailbox;
+  uint8_t dummy_data[8] = {0}; // 占位数组，硬件发远程帧时会自动忽略它
+
+  CAN_HandleTxMsg.StdId = id;
+  CAN_HandleTxMsg.ExtId = 0x00;
+  CAN_HandleTxMsg.IDE   = CAN_ID_STD;
+  CAN_HandleTxMsg.RTR   = CAN_RTR_REMOTE; // 固定为远程帧
+  CAN_HandleTxMsg.DLC   = len;            // 请求对方返回的数据长度(填0或8均可)
+  CAN_HandleTxMsg.TransmitGlobalTime = DISABLE;
+
+  uint32_t timeout = 0xFFFF; // 超时计数
+  while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
+  {
+    if (timeout-- == 0) return; // 如果等太久还没空位（说明总线断开了），直接退出不卡死程序
+  }
+  HAL_CAN_AddTxMessage(&hcan, &CAN_HandleTxMsg, dummy_data, &TxMailbox);
 }
 
 
 //CAN接收
-volatile uint8_t  CAN_RxFlag = 0;      // 收到新报文的标志（volatile 必须！）
-uint8_t           CAN_RxData[8] = {0}; // 接收数据缓冲区
-CAN_RxHeaderTypeDef CAN_RxHeader;      // 报文头（ID、DLC 等）
+volatile uint8_t      CAN_RxFlag = 0;         // 收到新报文的标志
+uint8_t               CAN_RxData[8] = {0};    // 接收数据缓冲区
+CAN_RxHeaderTypeDef   CAN_RxHeader;           // 报文头（ID、RTR、DLC等）
 
-// ── CAN 接收中断回调 ──
+// —— CAN 接收中断回调 ——
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
-    CAN_RxHeaderTypeDef rxHeader;      // 局部变量，用 2a 的全局也行
-    uint8_t rxData[8];
-
-    // ① 从 FIFO0 把最早的一帧取出来（输出参数：HAL 帮你填好）
-    if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rxHeader, rxData) == HAL_OK)
-    {
-        // ② 暂存（8 字节固定拷，DLC 可能小于 8）
-        for (uint8_t i = 0; i < 8; i++) {
-            CAN_RxData[i] = rxData[i];
-        }
-        CAN_RxHeader = rxHeader;
-
-        // ③ 只置标志，不做别的事
-        CAN_RxFlag = 1;
-    }
+  if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &CAN_RxHeader, CAN_RxData) == HAL_OK)
+  {
+    CAN_RxFlag = 1; // 置标志位，通知主循环去处理
+  }
 }
+// 3.接收处理函数（在主循环中调用）
+void CAN_Rx_Process(void)
+{
+  if (CAN_RxFlag == 0) return; // 没有新报文就直接返回
+  CAN_RxFlag = 0;              // 清除标志位，准备接收下一帧
+
+  // 只处理标准帧 (Standard ID)
+  if(CAN_RxHeader.IDE != CAN_ID_STD) return;
+    
+  // 处理远程帧
+  if(CAN_RxHeader.RTR == CAN_RTR_REMOTE)
+  {
+    if(CAN_RxHeader.StdId == CAN_ID_FB_MOTOR_STATE) 
+    {
+      uint8_t state_buf[8] = {0};
+
+      
+
+      // 立刻把电机状态作为【数据帧】发回给控制板
+      CAN_Send_Data(CAN_ID_FB_MOTOR_STATE, state_buf, 8);
+    }
+  } 
+  //处理数据帧
+  else if(CAN_RxHeader.RTR ==  CAN_RTR_DATA)
+  {
+    switch (CAN_RxHeader.StdId)
+    {
+      //急停指令(0x001)
+      case CAN_ID_EMERG_STOP:
+
+        break;
+
+      //电机换向指令(0x101)  
+      case CAN_ID_CMD_MOTOR_CD:
+      
+        break;
+
+      //远程动态微调 PID 参数(0x102~0x104)
+      case CAN_ID_CMD_PID_PSET:
+
+        break;
+      case CAN_ID_CMD_PID_ISET:
+      
+        break;
+      case CAN_ID_CMD_PID_DSET:
+
+        break;
+
+      //设置目标速度(0x108)
+      case CAN_ID_CMD_TARGET_SPEED:
+
+        break;
+        
+      //设置目标位置(0x109)
+      case CAN_ID_CMD_TARGET_POSITION:
+
+        break;
+
+      //速度环控制(0x10A)
+      case CAN_ID_CMD_SPEEDLOOP:
+
+        break;
+
+      //位置环控制(0x10B)
+      case CAN_ID_CMD_POSITIONLOOP:
+
+        break;
+
+      //位置-速度双环控制(0x10C)
+      case CAN_ID_CMD_DOUBLELOOP:
+
+        break;
+
+      //温度数据反馈(0x301)
+      case CAN_ID_FB_TEMP_STATUS:
+
+        break;
+        
+      default:
+        break;
+    }
+
+
+  }
+}
+
 /* USER CODE END 1 */
 

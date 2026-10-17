@@ -29,7 +29,7 @@ extern "C" {
 #include "main.h"
 
 /* USER CODE BEGIN Includes */
-
+#include "can_protocol.h"
 /* USER CODE END Includes */
 
 extern CAN_HandleTypeDef hcan;
@@ -42,9 +42,12 @@ void MX_CAN_Init(void);
 
 /* USER CODE BEGIN Prototypes */
 void CAN_ConfigInit(void);
-void CAN_Send(void);
+void CAN_Send_Data(uint32_t id, uint8_t *data, uint8_t len);
+void CAN_Send_Remote(uint32_t id, uint8_t len);
 
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
+void CAN_Rx_Process(void);
+
 extern volatile uint8_t CAN_RxFlag;
 extern uint8_t CAN_RxData[8];
 extern CAN_RxHeaderTypeDef CAN_RxHeader;
