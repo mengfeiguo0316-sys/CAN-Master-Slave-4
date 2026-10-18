@@ -77,7 +77,7 @@ float POS (PIDdata* pid,float pos_goal)
 /**
  * @brief  速度-位置串级控制（位置环作外环，速度环作内环）
  * 
- * @param  pos_ok: 位置环使能标志(1：开启位置环，0：关闭位置环)
+ * @param  moed:   电机控制模式
  * @param  pos:    目标位置（角度）
  * @param  speed:  目标速度
  *
@@ -86,27 +86,60 @@ float POS (PIDdata* pid,float pos_goal)
  * @note   位置环开启时：位置环的输出作为速度环的给定，并限幅在 ±300；
  *         位置环关闭时：直接使用传入的 speed 作为速度环给定
  */
-void Speed_Pos_loop(uint8_t pos_ok,float pos,float speed)
+
+MotorCtrlMode_e g_motor_mode = MOTOR_MODE_STOP;//设置默认状态为停机模式
+float g_target_pos   = 0.0f;
+float g_target_speed = 0.0f;
+
+void Speed_Pos_loop(MotorCtrlMode_e mode,float pos,float speed)
 {		
-		Getspeed(&PID[0]);// 获取当前速度
+		// 1. 无论处于什么模式，都实时更新当前速度和位置，确保 CAN (0x201) 随时能上报最新状态
+    	Getspeed(&PID[0]);
+    	Getpos(&PID[0]);
 	
-		if(pos_ok == 1)// 位置环使能标志
+		//2.根据不同模式计算PID输出
+		switch	(mode)
 		{
-			Getpos(&PID[0]);// 获取当前位置
-			speed = POS(&PID[0],pos);// 位置环输出，作为速度环的给定
-			if(speed > 300.0f) speed = 300.0f;
-			if(speed < -300.0f) speed = -300.0f;
-			
-			PID[0].speed_goal = speed;// 把速度环目标值设为位置环的输出
+			//停机(急停)模式(0x00)
+			case MOTOR_MODE_STOP:
+				PID_Clear(&PID[0]);    // 清空积分项和输出，防止下次启动暴冲
+        		break;
+
+			//单速度环模式(0x01)
+			case MOTOR_MODE_SPEED:
+				PID_Speed(&PID[0],5.0f,speed);
+				PID_calculate(&PID[0]);
+				break;
+
+			//单位置环模式(0x02)
+			case MOTOR_MODE_POSITION:
+				// 直接将位置环P的输出作为 PWM 占空比，不经过速度环 PID_calculate
+           		float pwm_out = POS(&PID[0], pos);
+				// PWM 占空比限幅
+            	if (pwm_out > 1000.0f)  pwm_out = 1000.0f;
+            	if (pwm_out < -1000.0f) pwm_out = -1000.0f;
+
+				PID[0].output = pwm_out;
+            	break;
+
+			//位置-速度双环模式(0x03)
+			case MOTOR_MODE_POS_SPEED:
+				// 外环：位置环输出作为速度环的目标值，并限幅在 ±300 RPM
+            	speed = POS(&PID[0], pos);
+            	if (speed > 300.0f)  speed = 300.0f;
+            	if (speed < -300.0f) speed = -300.0f;
+
+            	PID[0].speed_goal = speed;
+            
+            	// 内环：执行速度环 PID 计算
+            	PID_calculate(&PID[0]);
+            	break;
+
+			default:
+            	PID[0].output = 0.0f;
+            	break;		
 		}
-		else 
-		{
-			PID_Speed(&PID[0],5.0f,speed);
-			
-		}
-	
-		PID_calculate(&PID[0]);
-	
-		PWM_set(&PID[0]);
-	
+
+		// 3. 将计算出的 output 作用到电机驱动引脚
+    	PWM_set(&PID[0]);
 }
