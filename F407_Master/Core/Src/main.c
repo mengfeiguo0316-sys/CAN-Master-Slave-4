@@ -122,8 +122,21 @@ int main(void)
       int len = snprintf(buf, sizeof(buf), "TEMP=%d\r\n", temp_send);
       HAL_UART_Transmit(&huart1, (uint8_t *)buf, len, 0xFFFF);
     }
-
     
+    if(can_rx_flag)
+    {
+      can_rx_flag = 0;
+      tem = BSP_DS18B20_ReadTemp();
+      int16_t temp_send = (int16_t)(tem >= 0.0f ? (tem * 10.0f + 0.5f) : (tem * 10.0f - 0.5f));
+
+      uint8_t txbuf[4];
+      txbuf[0] = (uint8_t)(temp_send & 0xFF);
+      txbuf[1] = (uint8_t)((temp_send >> 8) & 0xFF);
+      txbuf[2] = 0;
+      txbuf[3] = 0;
+
+      CAN_Send((char *)txbuf);
+    }
   }
   /* USER CODE END 3 */
 }

@@ -19,8 +19,11 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "can.h"
+#include "stm32f4xx_hal_can.h"
 
 /* USER CODE BEGIN 0 */
+#include"can_protocol.h"
+#include <stdint.h>
 static void CAN_Filter_Config(void);
 /* USER CODE END 0 */
 
@@ -59,7 +62,7 @@ void MX_CAN1_Init(void)
   {
     Error_Handler();
   }
-  if (HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK)
+  if (HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK)//数据到达中断标志位使能
   {
     Error_Handler();
   }
@@ -140,33 +143,37 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef* canHandle)
 }
 
 /* USER CODE BEGIN 1 */
-
 static void CAN_Filter_Config(void)
 {
   CAN_FilterTypeDef CAN_FilterInitStructure={0};
 
-  CAN_FilterInitStructure.FilterBank = 0;                          
+  CAN_FilterInitStructure.FilterBank = 1;                          
   CAN_FilterInitStructure.FilterMode = CAN_FILTERMODE_IDMASK;      
-  CAN_FilterInitStructure.FilterScale = CAN_FILTERSCALE_32BIT;     
+  CAN_FilterInitStructure.FilterScale = CAN_FILTERSCALE_16BIT;     
   CAN_FilterInitStructure.FilterFIFOAssignment = CAN_FILTER_FIFO0; 
   CAN_FilterInitStructure.FilterActivation = CAN_FILTER_ENABLE;    
   CAN_FilterInitStructure.SlaveStartFilterBank = 14; // 双CAN系列配置,3号开始归CAN2,简单说：就是划地盘的线
 
-  // 筛选扩展远程帧 ID: 0x1FFFFFFF
-  uint32_t id_reg = ((uint32_t)0x1FFFFFFF << 3) | CAN_ID_EXT | CAN_RTR_DATA;
-  CAN_FilterInitStructure.FilterIdHigh = (uint16_t)(id_reg >> 16);
-  CAN_FilterInitStructure.FilterIdLow = (uint16_t)(id_reg & 0xFFFF);      
+  CAN_FilterInitStructure.FilterIdHigh     = FILTER16_STD_DATA(CAN_ID_FB_TEMP_STATUS);
+  CAN_FilterInitStructure.FilterIdLow      = FILTER16_MASK_ALL;
 
-  //CAN_FilterInitStructure.FilterMaskIdHigh = 0xFFFF;
-  //CAN_FilterInitStructure.FilterMaskIdLow = 0xFFFF;
-
-  // 临时测试：接受所有帧（mask 全部清零 = 任何位都不比）
-  CAN_FilterInitStructure.FilterMaskIdHigh = 0x0000;
-  CAN_FilterInitStructure.FilterMaskIdLow  = 0x0000;
-
+  CAN_FilterInitStructure.FilterMaskIdHigh = FILTER16_STD_REMOTE(CAN_ID_FB_TEMP_STATUS);
+  CAN_FilterInitStructure.FilterMaskIdLow  = FILTER16_MASK_ALL;
 
   HAL_CAN_ConfigFilter(&hcan1, &CAN_FilterInitStructure);
 }
 
+void CAN_Send(char *p)
+{
+  CAN_TxHeaderTypeDef Can_Tx_Typedef={0};
+  uint32_t TxMailbox=3;
+
+  Can_Tx_Typedef.StdId=CAN_ID_FB_TEMP_STATUS;
+  Can_Tx_Typedef.DLC=4;
+  Can_Tx_Typedef.IDE=CAN_ID_STD;
+  Can_Tx_Typedef.RTR=CAN_RTR_DATA;
+
+  HAL_CAN_AddTxMessage(&hcan1,&Can_Tx_Typedef,(uint8_t*)p,&TxMailbox);
+}
 /* USER CODE END 1 */
 
