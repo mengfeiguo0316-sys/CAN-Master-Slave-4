@@ -39,5 +39,5 @@ extern PIDdata PID[3];//0~2对应速度，位置，电流环
 void PID_init(PIDdata* pid,float kp,float ki,float kd);
 void PID_Speed(PIDdata* pid,float step,float real);	
 void PID_calculate(PIDdata* pid);
-
+void PID_Clear(PIDdata* pid);
 

@@ -30,6 +30,9 @@ extern "C" {
 
 /* USER CODE BEGIN Includes */
 #include "can_protocol.h"
+#include <string.h>
+#include "PID.h"
+#include "loop.h"
 /* USER CODE END Includes */
 
 extern CAN_HandleTypeDef hcan;

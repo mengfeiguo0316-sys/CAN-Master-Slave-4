@@ -111,3 +111,13 @@ void PID_calculate(PIDdata* pid)
 }
 
 
+//清空 PID 积分与历史误差（急停或切换模式时调用）
+void PID_Clear(PIDdata* pid)
+{
+    pid->ei         = 0.0f;
+    pid->eilast     = 0.0f;
+    pid->eisum      = 0.0f; // 核心：清除积分累加
+    pid->eidif      = 0.0f;
+    pid->speed_goal = 0.0f; // 清除速度斜坡中间量
+    pid->output     = 0.0f;
+}

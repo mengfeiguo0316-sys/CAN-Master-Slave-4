@@ -106,10 +106,11 @@ int main(void)
 	
 	PWM_init();//初始化pwm
 	Mcinit();//初始化脉冲计数
-	uint32_t time = 0;
 	
 	PID_init(&PID[0],2.0f,0.2f,0.0f);//初始化PID
 	pos_kp(&PID[0],1.0f);//设置位置环的KP
+
+  
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -119,13 +120,6 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  
-	  //CAN_Rx_Process();
-	  if(ok == 1)
-	  {
-			ok = 0;
-			Speed_Pos_loop(1,180.0f,0.0f);//(位置环开关,目标位置,目标速度)
-	  }
 	  
   }
   /* USER CODE END 3 */
