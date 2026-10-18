@@ -3,7 +3,7 @@
 #include "PID.h"
 #include "tim.h"
 
-#define Circlemax 827.2
+#define Circlemax 827.2f
 
 typedef struct num{
 	uint16_t NowNum;

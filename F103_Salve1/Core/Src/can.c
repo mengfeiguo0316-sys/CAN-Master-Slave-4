@@ -66,7 +66,7 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
   if(canHandle->Instance==CAN1)
   {
   /* USER CODE BEGIN CAN1_MspInit 0 */
-
+    __HAL_RCC_AFIO_CLK_ENABLE(); //开启重映射时钟
   /* USER CODE END CAN1_MspInit 0 */
     /* CAN1 clock enable */
     __HAL_RCC_CAN1_CLK_ENABLE();
@@ -150,7 +150,6 @@ static void CAN_Filter_Config(void)
 //初始化
 void CAN_ConfigInit(void)
 {
-	MX_CAN_Init();
 	CAN_Filter_Config();
 	
 }
@@ -169,7 +168,7 @@ void CAN_Send_Data(uint32_t id, uint8_t *data, uint8_t len)
 	CAN_HandleTxMsg.DLC = len;				    //数据长度
 	CAN_HandleTxMsg.TransmitGlobalTime = DISABLE;//关闭“发送全局时间戳”功能
 
-  uint32_t timeout = 0xFFFF; // 超时计数
+  uint32_t timeout = 0xFF; // 超时计数
   while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
   {
     if (timeout-- == 0) return; // 如果等太久还没空位（说明总线断开了），直接退出不卡死程序
@@ -191,7 +190,7 @@ void CAN_Send_Remote(uint32_t id, uint8_t len)
   CAN_HandleTxMsg.DLC   = len;            // 请求对方返回的数据长度
   CAN_HandleTxMsg.TransmitGlobalTime = DISABLE;
 
-  uint32_t timeout = 0xFFFF; // 超时计数
+  uint32_t timeout = 0xFF; // 超时计数
   while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
   {
     if (timeout-- == 0) return; // 如果等太久还没空位（说明总线断开了），直接退出不卡死程序
@@ -232,13 +231,13 @@ void CAN_Rx_Process(void)
       int16_t cur_speed = (int16_t)PID[0].speed_now; // 当前转速 
       int32_t cur_pos   = (int32_t)(PID[0].pos_now * 360.0f / Circlemax); // 当前角度 
 
-      memcpy(&state_buf[0], &cur_speed, 2);           // 字节 1~2: 转速
-      memcpy(&state_buf[2], &cur_pos,   4);           // 字节 3~6: 位置(角度)
-      state_buf[6] = (uint8_t)g_motor_mode;           // 字节 7: 当前控制模式
+      state_buf[0] = (uint8_t)g_motor_mode;           // 字节 1: 当前控制模式
+      memcpy(&state_buf[1], &cur_speed, 2);           // 字节 2~3: 转速
+      memcpy(&state_buf[3], &cur_pos,   4);           // 字节 4~7: 位置(角度)
       //state_buf[7] = (uint8_t)g_fault_code;         // 字节 8: 故障码
       
       // 立刻把电机状态作为【数据帧】发回给控制板
-      CAN_Send_Data(CAN_ID_FB_MOTOR_STATE, state_buf, 8);
+      CAN_Send_Data(CAN_ID_FB_MOTOR_STATE, state_buf, 7);
     }
   } 
   //处理数据帧
@@ -262,26 +261,37 @@ void CAN_Rx_Process(void)
       //————————————————PID参数调节————————————————//
       //远程动态微调 PID 参数(0x102~0x104)
       case CAN_ID_CMD_PID_PSET:
+        if (CAN_RxHeader.DLC < sizeof(PID[0].Kp)) break; // 确保数据长度足够
         memcpy(&PID[0].Kp, &CAN_RxData[0], sizeof(float));
         break;
       case CAN_ID_CMD_PID_ISET:
+        if (CAN_RxHeader.DLC < sizeof(PID[0].Ki)) break; // 确保数据长度足够
         memcpy(&PID[0].Ki, &CAN_RxData[0], sizeof(float));
         break;
       case CAN_ID_CMD_PID_DSET:
+        if (CAN_RxHeader.DLC < sizeof(PID[0].Kd)) break; // 确保数据长度足够
         memcpy(&PID[0].Kd, &CAN_RxData[0], sizeof(float));
         break;
 
       //————————————————电机速度/位置设置————————————————//
       //设置目标速度(0x108)
       case CAN_ID_CMD_TARGET_SPEED:
-        memcpy(&g_target_speed, &CAN_RxData[0], sizeof(float));
+      {
+        int16_t v;
+        if (CAN_RxHeader.DLC < sizeof(v)) break; // 确保数据长度足够
+        memcpy(&v, &CAN_RxData[0], sizeof(v));
+        g_target_speed = (float)v;// 将接收到的 int16_t 转速值转换为 float 并存储
         break;
-        
+      } 
       //设置目标位置(0x109)
       case CAN_ID_CMD_TARGET_POSITION:
-        memcpy(&g_target_pos, &CAN_RxData[0], sizeof(float));
+      {
+        int32_t v;
+        if (CAN_RxHeader.DLC < sizeof(v)) break; // 确保数据长度足够
+        memcpy(&v, &CAN_RxData[0], sizeof(v));
+        g_target_pos = v;// 将接收到的 int32_t 位置值转换为 int32_t 并存储
         break;
-
+      }
       //————————————————电机控制模式切换————————————————//
       //速度环控制(0x10A)
       case CAN_ID_CMD_SPEEDLOOP:

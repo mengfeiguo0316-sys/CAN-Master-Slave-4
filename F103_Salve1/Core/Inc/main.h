@@ -65,7 +65,7 @@ void Error_Handler(void);
 #define AIN2_GPIO_Port GPIOF
 
 /* USER CODE BEGIN Private defines */
-
+extern volatile uint8_t ok;
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
