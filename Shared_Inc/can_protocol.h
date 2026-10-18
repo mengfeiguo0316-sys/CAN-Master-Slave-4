@@ -92,4 +92,62 @@ typedef struct {
 
 #pragma pack(pop) // 恢复默认对齐方式
 
+/* ==========================================================================
+ * 4 滤波器常用宏定义
+ * ========================================================================== */
+
+/* ============================================================
+ * 16 位滤波器模式 (CAN_FILTERSCALE_16BIT)
+ * FilterIdHigh / FilterIdLow 各自独立构成一个完整过滤器
+ * ------------------------------------------------------------
+ *  bit 15 ~ bit 5 : STID[10:0]  标准 ID
+ *  bit 4          : IDE         0=标准帧 1=扩展帧
+ *  bit 3          : RTR         0=数据帧 1=远程帧
+ *  bit 2 ~ bit 0  : EXID[17:15] 扩展 ID 高 3 位（标准帧忽略）
+ * ============================================================ */
+#define FILTER16_STD_ID(id)     ((uint16_t)(((id) & 0x7FFU) << 5))
+#define FILTER16_IDE_STD        (0U << 4)
+#define FILTER16_IDE_EXT        (1U << 4)
+#define FILTER16_RTR_DATA       (0U << 3)
+#define FILTER16_RTR_REMOTE     (1U << 3)
+
+/* 组合宏：常用场景一键拼好 */
+#define FILTER16_STD_DATA(id)   (FILTER16_STD_ID(id) | FILTER16_IDE_STD | FILTER16_RTR_DATA)
+#define FILTER16_STD_REMOTE(id) (FILTER16_STD_ID(id) | FILTER16_IDE_STD | FILTER16_RTR_REMOTE)
+
+/* 掩码快捷宏 */
+#define FILTER16_MASK_ALL       0xFFFFU  /* 所有位严格匹配（最严格） */
+#define FILTER16_MASK_STD       0xFFF8U  /* 只关心 STID+IDE+RTR，忽略 EXID[17:15] */
+
+
+/* ============================================================
+ * 32 位滤波器模式 (CAN_FILTERSCALE_32BIT)
+ * FilterIdHigh(高16位) + FilterIdLow(低16位) 组合成 32 位寄存器
+ * ------------------------------------------------------------
+ *  bit 31 ~ bit 3 : 标准帧: STID[10:0] 位于 bit 31:21
+ *                   扩展帧: EXID[28:0] 位于 bit 31:3
+ *  bit 2          : IDE   0=标准帧 1=扩展帧
+ *  bit 1          : RTR   0=数据帧 1=远程帧
+ *  bit 0          : 保留
+ * ============================================================ */
+#define FILTER32_STD_ID(id)     ((uint32_t)(((id) & 0x7FFU)       << 21))
+#define FILTER32_EXT_ID(id)     ((uint32_t)(((id) & 0x1FFFFFFFU)  <<  3))
+#define FILTER32_IDE_STD        (0U << 2)
+#define FILTER32_IDE_EXT        (1U << 2)
+#define FILTER32_RTR_DATA       (0U << 1)
+#define FILTER32_RTR_REMOTE     (1U << 1)
+
+/* 组合宏：常用场景一键拼好 */
+#define FILTER32_STD_DATA(id)   (FILTER32_STD_ID(id) | FILTER32_IDE_STD | FILTER32_RTR_DATA)
+#define FILTER32_STD_REMOTE(id) (FILTER32_STD_ID(id) | FILTER32_IDE_STD | FILTER32_RTR_REMOTE)
+#define FILTER32_EXT_DATA(id)   (FILTER32_EXT_ID(id) | FILTER32_IDE_EXT | FILTER32_RTR_DATA)
+#define FILTER32_EXT_REMOTE(id) (FILTER32_EXT_ID(id) | FILTER32_IDE_EXT | FILTER32_RTR_REMOTE)
+
+/* 拆分到 FilterIdHigh / FilterIdLow */
+#define FILTER32_HIGH(reg32)    ((uint16_t)(((uint32_t)(reg32) >> 16) & 0xFFFFU))
+#define FILTER32_LOW(reg32)     ((uint16_t)( (uint32_t)(reg32)        & 0xFFFFU))
+
+/* 掩码快捷宏 */
+#define FILTER32_MASK_ALL       0xFFFFFFFFU
+#define FILTER32_MASK_STD       0xFFFFFFFDU  /* 只关心 ID+IDE+RTR，忽略 bit0 */
 #endif /* __CAN_PROTOCOL_H */

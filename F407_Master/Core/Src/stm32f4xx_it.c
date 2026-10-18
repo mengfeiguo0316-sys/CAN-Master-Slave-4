@@ -243,11 +243,8 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
     {
         if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx, buf) == HAL_OK)//必须调用这个宏将数据读走不然FIFO0数据一直挂起中断反复触发
         {
-            if (rx.IDE == CAN_ID_EXT && rx.ExtId == 0x1FFFFFFF)
-            {
                 can_rx_flag = 1; // 方案一：设置接收完成标志位
                 //方案二：(软件环形队列（RingBuffer）或其他缓冲机制)可以在这里将buf数据存入队列，供主循环使用
-            }
         }
     }
 }
