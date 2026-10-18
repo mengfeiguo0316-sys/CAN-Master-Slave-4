@@ -1,6 +1,6 @@
 #include "bsp_led.h"
 #include "stm32f4xx_hal.h"
-#include "stm32f4xx_hal_gpio.h"
+
 
 void BSP_LED_Set(LED_Id_t led, LED_State_t state);
 
@@ -30,6 +30,7 @@ void BSP_LED_Set(LED_Id_t led, LED_State_t state)
         return;
 
     const led_hw_config_t *cfg = &g_led_configs[led];
+    
     GPIO_PinState inactive_level = (cfg->active_level == GPIO_PIN_SET) ? GPIO_PIN_RESET : GPIO_PIN_SET;//确定熄灭电平
 
     switch (state)
