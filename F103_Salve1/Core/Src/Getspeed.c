@@ -7,6 +7,9 @@ void Mcinit(void)
 	data.NowNum = 0;
 	data.BefNum = 0;
 	data.ChangeNum = 0;
+	data.Nowpos = 0;
+	data.Befpos = 0;  
+	data.Changepos = 0;
 	
 }
 

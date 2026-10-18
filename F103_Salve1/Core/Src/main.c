@@ -29,6 +29,7 @@
 #include "PID.h"
 #include "loop.h"
 #include <stdlib.h>
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -120,7 +121,21 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  
+
+    CAN_Rx_Process();//CAN接收处理函数
+    if(ok == 1)
+    {
+      ok = 0;
+      Speed_Pos_loop(g_motor_mode,g_target_pos,g_target_speed);//电机控制主循环
+
+      static uint8_t temp_cnt = 0;
+      if (++temp_cnt >= 50)
+      {
+        temp_cnt = 0;
+        CAN_Send_Remote(CAN_ID_FB_TEMP_STATUS, 8);
+      }
+    }
+
   }
   /* USER CODE END 3 */
 }

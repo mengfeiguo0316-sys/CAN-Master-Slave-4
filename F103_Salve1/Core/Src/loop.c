@@ -113,18 +113,19 @@ void Speed_Pos_loop(MotorCtrlMode_e mode,float pos,float speed)
 
 			//单位置环模式(0x02)
 			case MOTOR_MODE_POSITION:
+			{
 				// 直接将位置环P的输出作为 PWM 占空比，不经过速度环 PID_calculate
            		float pwm_out = POS(&PID[0], pos);
 				// PWM 占空比限幅
-            	if (pwm_out > 1000.0f)  pwm_out = 1000.0f;
-            	if (pwm_out < -1000.0f) pwm_out = -1000.0f;
+            	if (pwm_out > 999.0f)  pwm_out = 999.0f;
+            	if (pwm_out < -999.0f) pwm_out = -999.0f;
 
 				PID[0].output = pwm_out;
             	break;
-
+			}
 			//位置-速度双环模式(0x03)
 			case MOTOR_MODE_POS_SPEED:
-				// 外环：位置环输出作为速度环的目标值，并限幅在 ±300 RPM
+				// 外环：位置环输出作为速度环的目标值
             	speed = POS(&PID[0], pos);
             	if (speed > 300.0f)  speed = 300.0f;
             	if (speed < -300.0f) speed = -300.0f;
