@@ -142,7 +142,7 @@ int main(void)
       {
         temp_cnt = 0;
 
-        CAN_Send_Remote(CAN_ID_FB_TEMP_STATUS, 6);   // 请求温度
+        //CAN_Send_Remote(CAN_ID_FB_TEMP_STATUS, 6);   // 请求温度
 
         UART_Report_MotorState();                    // 串口上报: 模式/转速/位置/PWM
       }

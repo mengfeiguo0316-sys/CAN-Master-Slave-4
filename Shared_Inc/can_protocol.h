@@ -11,19 +11,12 @@
 #define CAN_ID_EMERG_STOP       0x001   // 急停
 
 // 控制指令类：控制板 -> 电机板 (高优先级: 0x100 ~ 0x1FF)
-#define CAN_ID_CMD_MOTOR_CD   0x101   // 电机换向
+#define CAN_ID_CMD_MOTOR_CD   0x101   // 电机控制
 
-// 远程动态微调 PID 参数, 通过 CAN 指令进行增减 幅度为0.01
+// 远程动态微调 PID 参数
 #define CAN_ID_CMD_PID_PSET     0x102   
 #define CAN_ID_CMD_PID_ISET     0x103   
 #define CAN_ID_CMD_PID_DSET     0x104   
-
-#define CAN_ID_CMD_TARGET_SPEED     0x108   
-#define CAN_ID_CMD_TARGET_POSITION  0x109
-
-#define CAN_ID_CMD_SPEEDLOOP     0x10A  
-#define CAN_ID_CMD_POSITIONLOOP  0x10B
-#define CAN_ID_CMD_DOUBLELOOP    0x10C
 
 // 状态反馈类：电机板 -> 控制板 (中优先级: 0x200 ~ 0x2FF)
 #define CAN_ID_FB_MOTOR_STATE   0x201   //电机双环实时状态反馈 (转速,位置,状态是否正常等)
@@ -75,7 +68,7 @@ typedef struct {
 typedef struct {
     uint8_t  current_mode;   // 当前实际运行模式
     int16_t  actual_speed;   // 当前实际转速 (RPM)
-    int32_t  actual_pos;     // 当前实际累计位置 (编码器脉冲数)
+    int32_t  actual_pos;     // 当前实际累计位置 
     uint8_t  error_code;     // 电机端故障码 (参考 SystemError_e)
 } CanMsg_MotorFb_t;
 

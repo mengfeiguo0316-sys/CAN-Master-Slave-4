@@ -112,6 +112,12 @@ void Speed_Pos_loop(MotorCtrlMode_e mode,float pos,float speed)
 				// 速度目标限幅
 				if (speed >  500.0f) speed =  500.0f;
 				if (speed < -500.0f) speed = -500.0f;
+				// 目标为 0 且已经慢下来 → 直接刹车，不再做闭环，避免零速来回摆
+    			if (fabsf(speed) < 1.0f && fabsf(PID[0].speed_now) < 5.0f)
+    			{
+        			PID_Clear(&PID[0]);   // 清积分 + 输出 0
+        			break;                // output=0 → PWM_set 刹车
+    			}
 				PID_Speed(&PID[0],5.0f,speed);
 				PID_calculate(&PID[0]);
 				break;
