@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.22)
+﻿cmake_minimum_required(VERSION 3.22)
 
 #
 # This file is generated only once,
@@ -50,9 +50,11 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
+    ${CMAKE_CURRENT_SOURCE_DIR}/Core/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/User/BSP/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/User/Middleware/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/User/APP/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../Shared_Inc
-    ${CMAKE_CURRENT_SOURCE_DIR}/BSP/Inc
-    ${CMAKE_CURRENT_SOURCE_DIR}/Middleware/Inc
 )
 
 
@@ -61,10 +63,11 @@ target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined symbols
 )
 
-# Add BSP sources
+# Add APP/BSP/Middleware sources
 file(GLOB BSP_SOURCES CONFIGURE_DEPENDS
-    "${CMAKE_CURRENT_SOURCE_DIR}/BSP/Src/*.c"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Middleware/Src/*.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/User/APP/Src/*.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/User/BSP/Src/*.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/User/Middleware/Src/*.c"
 )
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE ${BSP_SOURCES})
 
@@ -77,3 +80,5 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
 
     # Add user defined libraries
 )
+
+

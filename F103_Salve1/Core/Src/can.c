@@ -54,6 +54,9 @@ void MX_CAN_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN CAN_Init 2 */
+  HAL_CAN_Start(&hcan);//使能
+  HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING);//开启FIFO0收报中断
+  CAN_ConfigInit();//初始化
 
   /* USER CODE END CAN_Init 2 */
 
