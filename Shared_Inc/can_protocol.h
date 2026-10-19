@@ -18,13 +18,6 @@
 #define CAN_ID_CMD_PID_ISET     0x103   
 #define CAN_ID_CMD_PID_DSET     0x104   
 
-#define CAN_ID_CMD_TARGET_SPEED     0x108   
-#define CAN_ID_CMD_TARGET_POSITION     0x109
-
-#define CAN_ID_CMD_SPEEDLOOP     0x10A  
-#define CAN_ID_CMD_POSITIONLOOP    0x10B
-#define CAN_ID_CMD_DOUBLELOOP    0x10C
-
 // 状态反馈类：电机板 -> 控制板 (中优先级: 0x200 ~ 0x2FF)
 #define CAN_ID_FB_MOTOR_STATE   0x201   //电机双环实时状态反馈 (转速,位置,状态是否正常等)
 
@@ -81,7 +74,6 @@ typedef struct {
 
 /**
  * @brief 温度与温控状态帧 (对应 CAN_ID_FB_TEMP_STATUS: 0x301)
- * @note  总长: 2 + 2 + 1 + 1 = 6 Bytes (不超过8字节即可)
  */
 typedef struct {
     int16_t  current_temp;   // 当前温度 (放大10倍传输，例如 255 代表 25.5℃，避免传float)
@@ -91,6 +83,8 @@ typedef struct {
 } CanMsg_TempStatus_t;
 
 #pragma pack(pop) // 恢复默认对齐方式
+
+
 
 /* ==========================================================================
  * 4 滤波器常用宏定义

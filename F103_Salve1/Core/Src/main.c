@@ -89,9 +89,7 @@ int main(void)
   MX_GPIO_Init();
   MX_CAN_Init();
   /* USER CODE BEGIN 2 */
-	CAN_ConfigInit();//初始化
-	HAL_CAN_Start(&hcan);//使能
-  HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING);//开启FIFO0收报中断
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -108,7 +106,6 @@ int main(void)
 	  }
 	  CAN_Send();
 	  HAL_Delay(500);
-
 	  
   }
   /* USER CODE END 3 */

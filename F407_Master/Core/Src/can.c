@@ -163,13 +163,26 @@ static void CAN_Filter_Config(void)
   HAL_CAN_ConfigFilter(&hcan1, &CAN_FilterInitStructure);
 }
 
-void CAN_Send(char *p)
+void CAN_Send(CanMsg_TempStatus_t *p)
 {
   CAN_TxHeaderTypeDef Can_Tx_Typedef={0};
-  uint32_t TxMailbox=3;
+  uint32_t TxMailbox;
 
   Can_Tx_Typedef.StdId=CAN_ID_FB_TEMP_STATUS;
-  Can_Tx_Typedef.DLC=4;
+  Can_Tx_Typedef.DLC=6;
+  Can_Tx_Typedef.IDE=CAN_ID_STD;
+  Can_Tx_Typedef.RTR=CAN_RTR_DATA;
+
+  HAL_CAN_AddTxMessage(&hcan1,&Can_Tx_Typedef,(uint8_t*)p,&TxMailbox);
+}
+
+void CAN_Send_cmd(CanMsg_MotorCmd_t *p)
+{
+  CAN_TxHeaderTypeDef Can_Tx_Typedef={0};
+  uint32_t TxMailbox;
+
+  Can_Tx_Typedef.StdId=CAN_ID_CMD_MOTOR_CD;
+  Can_Tx_Typedef.DLC=8;
   Can_Tx_Typedef.IDE=CAN_ID_STD;
   Can_Tx_Typedef.RTR=CAN_RTR_DATA;
 
