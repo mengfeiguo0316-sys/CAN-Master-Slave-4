@@ -20,6 +20,7 @@
 #include "main.h"
 #include "can.h"
 #include "tim.h"
+#include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -28,6 +29,7 @@
 #include "stdio.h"
 #include "PID.h"
 #include "loop.h"
+#include "uart_report.h"
 #include <stdlib.h>
 #include <string.h>
 /* USER CODE END Includes */
@@ -96,6 +98,7 @@ int main(void)
   MX_CAN_Init();
   MX_TIM1_Init();
   MX_TIM2_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
   //CAN 的初始化
 	CAN_ConfigInit();//初始化
@@ -110,6 +113,12 @@ int main(void)
 	
 	PID_init(&PID[0],2.0f,0.2f,0.0f);//初始化PID
 	pos_kp(&PID[0],1.0f);//设置位置环的KP
+
+  // 开机自检：上电立刻发一行，用于确认串口接线是否正常
+  {
+    const char *boot = "\r\n[BOOT] CAN_Send ready, UART1 115200 8N1\r\n";
+    HAL_UART_Transmit(&huart1, (uint8_t *)boot, (uint16_t)strlen(boot), 100);
+  }
 
   
   /* USER CODE END 2 */
@@ -128,11 +137,14 @@ int main(void)
       ok = 0;
       Speed_Pos_loop(g_motor_mode,g_target_pos,g_target_speed);//电机控制主循环
 
-      static uint8_t temp_cnt = 0;
-      if (++temp_cnt >= 50)
+      static uint16_t temp_cnt = 0;
+      if (++temp_cnt >= 500)      // 500 × 10ms = 5 秒执行一次
       {
         temp_cnt = 0;
-        CAN_Send_Remote(CAN_ID_FB_TEMP_STATUS, 8);
+
+        CAN_Send_Remote(CAN_ID_FB_TEMP_STATUS, 6);   // 请求温度
+
+        UART_Report_MotorState();                    // 串口上报: 模式/转速/位置/PWM
       }
     }
 
