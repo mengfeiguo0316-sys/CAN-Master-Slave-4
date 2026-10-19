@@ -1,6 +1,8 @@
 #include "loop.h"
 
 
+#define PWM_SLEW_STEP   50.0f
+
 /**
  * @brief  初始化 PWM 与电机驱动
  * @note   启动 TIM2 通道2 的 PWM 输出，初始占空比设为 0（防止上电瞬间电机转动），
@@ -107,6 +109,9 @@ void Speed_Pos_loop(MotorCtrlMode_e mode,float pos,float speed)
 
 			//单速度环模式(0x01)
 			case MOTOR_MODE_SPEED:
+				// 速度目标限幅
+				if (speed >  500.0f) speed =  500.0f;
+				if (speed < -500.0f) speed = -500.0f;
 				PID_Speed(&PID[0],5.0f,speed);
 				PID_calculate(&PID[0]);
 				break;
@@ -120,19 +125,24 @@ void Speed_Pos_loop(MotorCtrlMode_e mode,float pos,float speed)
             	if (pwm_out > 999.0f)  pwm_out = 999.0f;
             	if (pwm_out < -999.0f) pwm_out = -999.0f;
 
-				PID[0].output = pwm_out;
+				// 平滑过渡：限制每次更新的 PWM 变化量，防止电机突然加速或减速
+				float out = PID[0].output; 
+				if (pwm_out > out + PWM_SLEW_STEP) out += PWM_SLEW_STEP;   // 加速上升
+				else if (pwm_out < out - PWM_SLEW_STEP) out -= PWM_SLEW_STEP;   // 减速下降
+				else  out  = pwm_out;     // 已接近，直接跟上
+
+				PID[0].output = out;
             	break;
 			}
 			//位置-速度双环模式(0x03)
 			case MOTOR_MODE_POS_SPEED:
 				// 外环：位置环输出作为速度环的目标值
-            	speed = POS(&PID[0], pos);
-            	if (speed > 300.0f)  speed = 300.0f;
-            	if (speed < -300.0f) speed = -300.0f;
-
-            	PID[0].speed_goal = speed;
-            
-            	// 内环：执行速度环 PID 计算
+				speed = POS(&PID[0], pos);
+				// 速度目标限幅
+				if (speed >  500.0f) speed =  500.0f;
+				if (speed < -500.0f) speed = -500.0f;
+				// 内环：速度环计算
+				PID_Speed(&PID[0],5.0f,speed);
             	PID_calculate(&PID[0]);
             	break;
 

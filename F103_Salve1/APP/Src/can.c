@@ -156,6 +156,7 @@ void CAN_ConfigInit(void)
 
 //CAN发送
 CAN_TxHeaderTypeDef CAN_HandleTxMsg;
+
 //1.发送数据函数
 void CAN_Send_Data(uint32_t id, uint8_t *data, uint8_t len)
 {
@@ -202,8 +203,7 @@ void CAN_Send_Remote(uint32_t id, uint8_t len)
 //CAN接收
 volatile uint8_t      CAN_RxFlag = 0;         // 收到新报文的标志
 uint8_t               CAN_RxData[8] = {0};    // 接收数据缓冲区
-CAN_RxHeaderTypeDef   CAN_RxHeader;           // 报文头（ID、RTR、DLC等）
-
+CAN_RxHeaderTypeDef   CAN_RxHeader;           // 报文头（ID、RTR、DLC等）               
 // —— CAN 接收中断回调 ——
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
@@ -314,9 +314,21 @@ void CAN_Rx_Process(void)
       //————————————————温度数据解析————————————————//
       //温度数据反馈(0x301)
       case CAN_ID_FB_TEMP_STATUS:
-
+      {
+        if (CAN_RxHeader.DLC < 6) break;
+        if (g_motor_mode != MOTOR_MODE_SPEED) PID_Clear(&PID[0]);
+        g_motor_mode = MOTOR_MODE_SPEED;     // 切换为 0x01 单速度环
+        uint8_t temp = CAN_RxData[4];
+        if (temp == 10)
+        {
+          g_target_speed = 50.0f;
+        }
+        else if (temp == 100)
+        {
+          g_target_speed = 500.0f;
+        }
         break;
-        
+      }
       default:
         break;
     }
