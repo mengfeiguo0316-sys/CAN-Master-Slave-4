@@ -3,6 +3,8 @@
 #include"stm32f4xx_hal.h"
 #include "stm32f4xx_hal_cortex.h"
 #include <stdint.h>
+#include"Task.h"
+
 
 /*这些宏定义是模块私有，为减少代码耦合性不能放在.h文件！*/
 #define DS18B20_CONVERT_TIME_MS   750U//温度转换一次所需时间大概750ms
