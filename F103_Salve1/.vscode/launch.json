@@ -1,0 +1,55 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      // ── CMSIS-DAP 调试器（OpenOCD）──
+      // 适用于 STM32F103ZE + CMSIS-DAP/DAPLink 调试器
+      "name": "Cortex Debug (CMSIS-DAP / OpenOCD)",
+      "type": "cortex-debug",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+
+      // CMake 构建产物（GNU 工具链生成的 ELF）
+      "executable": "${workspaceFolder}/build/Debug/CAN_Send.elf",
+
+      // 调试服务器类型：CMSIS-DAP 走 OpenOCD
+      "servertype": "openocd",
+      "interface": "swd",
+      "device": "STM32F103ZE",
+      "configFiles": [
+        "interface/cmsis-dap.cfg",  // CMSIS-DAP 调试器驱动脚本
+        "target/stm32f1x.cfg"       // STM32F1 系列目标脚本
+      ],
+
+      // 启动后停在 main 函数入口
+      "runToEntryPoint": "main",
+
+      // 按 F5 时先自动编译，避免烧进旧固件
+      "preLaunchTask": "Build (Debug)",
+
+      // 不打印 GDB 底层冗余日志（排障时可临时改成 "raw"）
+      "showDevDebugOutput": "none"
+    },
+    {
+      // ── 只连接、不烧写 ──
+      // 适合固件已由 Keil 烧好，只想用 VS Code 调试/看外设寄存器的场景
+      "name": "Cortex Debug (CMSIS-DAP / Attach)",
+      "type": "cortex-debug",
+      "request": "attach",
+      "cwd": "${workspaceFolder}",
+      "executable": "${workspaceFolder}/build/Debug/CAN_Send.elf",
+      "servertype": "openocd",
+      "interface": "swd",
+      "device": "STM32F103ZE",
+      "configFiles": [
+        "interface/cmsis-dap.cfg",
+        "target/stm32f1x.cfg"
+      ],
+
+      // 按 F5 时先自动编译，确保符号与固件一致
+      "preLaunchTask": "Build (Debug)",
+      "showDevDebugOutput": "none"
+    }
+  ]
+}
+

@@ -1,0 +1,75 @@
+{
+  // ⚠️ 首次使用或 CMakeLists.txt 改动后，先运行一次「Configure (Debug)」
+  "version": "2.0.0",
+  "tasks": [
+    {
+      // ── 编译（默认构建任务：Ctrl+Shift+B）──
+      // 需先执行过一次「Configure (Debug)」，之后增量编译即可
+      "label": "Build (Debug)",
+      "type": "shell",
+      "command": "cmake",
+      "args": ["--build", "--preset", "Debug"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": ["$gcc"],
+      "group": { "kind": "build", "isDefault": true },
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true }
+    },
+    {
+      // ── 首次使用 / CMakeLists.txt 改动后执行一次 ──
+      "label": "Configure (Debug)",
+      "type": "shell",
+      "command": "cmake",
+      "args": ["--preset", "Debug"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true }
+    },
+    {
+      // ── 清理编译产物 ──
+      "label": "Clean (Debug)",
+      "type": "shell",
+      "command": "cmake",
+      "args": ["--build", "--preset", "Debug", "--target", "clean"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true }
+    },
+    {
+      // ── 生成 HEX（给 Keil、STM32CubeProgrammer 等工具用）──
+      "label": "生成 HEX",
+      "type": "shell",
+      "command": "arm-none-eabi-objcopy",
+      "args": [
+        "-O", "ihex",
+        "${workspaceFolder}/build/Debug/CAN_Send.elf",
+        "${workspaceFolder}/build/Debug/CAN_Send.hex"
+      ],
+      "options": { "cwd": "${workspaceFolder}" },
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true }
+    },
+    {
+      // ── 生成 BIN ──
+      "label": "生成 BIN",
+      "type": "shell",
+      "command": "arm-none-eabi-objcopy",
+      "args": [
+        "-O", "binary",
+        "${workspaceFolder}/build/Debug/CAN_Send.elf",
+        "${workspaceFolder}/build/Debug/CAN_Send.bin"
+      ],
+      "options": { "cwd": "${workspaceFolder}" },
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true }
+    },
+    {
+      // ── 只烧录、不进调试（等价于命令行 openocd program）──
+      "label": "烧录（不调试）",
+      "type": "shell",
+      "command": "openocd",
+      "args": [
+        "-f", "interface/cmsis-dap.cfg",
+        "-f", "target/stm32f1x.cfg",
+        "-c", "program build/Debug/CAN_Send.elf verify reset exit"
+      ],
+      "options": { "cwd": "${workspaceFolder}" },
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true }
+    }
+  ]
+}
