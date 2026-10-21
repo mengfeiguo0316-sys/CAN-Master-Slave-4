@@ -41,7 +41,9 @@ extern CAN_HandleTypeDef hcan1;
 void MX_CAN1_Init(void);
 
 /* USER CODE BEGIN Prototypes */
-
+#include"can_protocol.h"
+void CAN_Send(CanMsg_TempStatus_t *p);
+void CAN_Send_cmd(CanMsg_MotorCmd_t *p);
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus

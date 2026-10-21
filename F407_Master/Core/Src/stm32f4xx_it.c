@@ -26,7 +26,10 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN TD */
-
+#include"can_protocol.h"
+#include "can.h"
+#include "bsp_ds18b20.h"
+#include <stdint.h>
 /* USER CODE END TD */
 
 /* Private define ------------------------------------------------------------*/
@@ -227,5 +230,42 @@ void CAN1_RX0_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
+/**
+  * @brief  FIFO 0 接收中断回调函数（硬件收到报文后自动进这里）
+  * @param  hcan: CAN句柄指针
+  */
+void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
+{
+    CAN_RxHeaderTypeDef rx;
+    uint8_t buf[8];
+    if (hcan->Instance == CAN1)
+    {
+        if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx, buf) == HAL_OK)//必须调用这个宏将数据读走不然FIFO0数据一直挂起中断反复触发
+        {
+          if(rx.StdId==CAN_ID_FB_TEMP_STATUS && rx.RTR==CAN_RTR_REMOTE)
+          {
 
+            CanMsg_TempStatus_t tx_tem={0};
+            float tem = BSP_DS18B20_ReadTemp();
+            int16_t temp_send = (int16_t)(tem >= 0.0f ? (tem * 10.0f + 0.5f) : (tem * 10.0f - 0.5f));
+
+            tx_tem.current_temp=temp_send;
+            tx_tem.threshold_temp=300;
+            if(tx_tem.current_temp>tx_tem.threshold_temp)
+            {
+              tx_tem.fan_pwm_duty=100;
+              tx_tem.is_over_temp=1;
+            }
+            else
+            {
+            tx_tem.fan_pwm_duty=10;
+            tx_tem.is_over_temp=0;
+            }
+            CAN_Send(&tx_tem);
+          }
+                // 方案一：设置接收完成标志位
+                //方案二：(软件环形队列（RingBuffer）或其他缓冲机制)可以在这里将buf数据存入队列，供主循环使用
+        }
+    }
+}
 /* USER CODE END 1 */
