@@ -111,14 +111,12 @@ int main(void)
 	PWM_init();//初始化pwm
 	Mcinit();//初始化脉冲计数
 	
-	PID_init(&PID[0],2.0f,0.2f,0.0f);//初始化PID
-	pos_kp(&PID[0],1.0f);//设置位置环的KP
+	PID_init(&PID[0],1.5f,0.2f,0.0f);//初始化PID
+	pos_kp(&PID[0],0.5f);//位置环KP：速度目标 = 0.5 × 位置误差(脉冲)，414脉冲→207RPM
 
-  // 开机自检：上电立刻发一行，用于确认串口接线是否正常
-  {
-    const char *boot = "\r\n[BOOT] CAN_Send ready, UART1 115200 8N1\r\n";
-    HAL_UART_Transmit(&huart1, (uint8_t *)boot, (uint16_t)strlen(boot), 100);
-  }
+  // 串口上报初始化（打开 USART1 中断，供非阻塞发送使用）+ 开机自检
+  UART_Report_Init();
+  UART_Report_Boot();
 
   
   /* USER CODE END 2 */
@@ -136,15 +134,12 @@ int main(void)
     {
       ok = 0;
       Speed_Pos_loop(g_motor_mode,g_target_pos,g_target_speed);//电机控制主循环
-
-      static uint16_t temp_cnt = 0;
-      if (++temp_cnt >= 500)      // 500 × 10ms = 5 秒执行一次
+      
+      static uint16_t cnt = 0;
+      if (++cnt >= 300)      // 300 × 10ms = 3 秒执行一次
       {
-        temp_cnt = 0;
-
-        CAN_Send_Remote(CAN_ID_FB_TEMP_STATUS, 6);   // 请求温度
-
-        UART_Report_MotorState();                    // 串口上报: 模式/转速/位置/PWM
+      		cnt = 0;
+          UART_Report_MotorState();                    // 串口上报: 模式/转速/位置/PWM
       }
     }
 

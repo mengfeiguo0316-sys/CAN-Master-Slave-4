@@ -1,4 +1,6 @@
 #include "loop.h"
+#include "can.h"        /* CAN_Send_Remote */
+#include <math.h>       /* fabsf */
 
 
 #define PWM_SLEW_STEP   50.0f
@@ -112,6 +114,12 @@ void Speed_Pos_loop(MotorCtrlMode_e mode,float pos,float speed)
 				// 速度目标限幅
 				if (speed >  500.0f) speed =  500.0f;
 				if (speed < -500.0f) speed = -500.0f;
+				// 目标为 0 且已经慢下来 → 直接刹车，不再做闭环，避免零速来回摆
+    			if (fabsf(speed) < 1.0f && fabsf(PID[0].speed_now) < 5.0f)
+    			{
+        			PID_Clear(&PID[0]);   // 清积分 + 输出 0
+        			break;                // output=0 → PWM_set 刹车
+    			}
 				PID_Speed(&PID[0],5.0f,speed);
 				PID_calculate(&PID[0]);
 				break;
@@ -141,10 +149,48 @@ void Speed_Pos_loop(MotorCtrlMode_e mode,float pos,float speed)
 				// 速度目标限幅
 				if (speed >  500.0f) speed =  500.0f;
 				if (speed < -500.0f) speed = -500.0f;
+				// 目标为 0 且已经慢下来 → 直接刹车，不再做闭环，避免零速来回摆
+    			if (fabsf(speed) < 1.0f && fabsf(PID[0].speed_now) < 5.0f)
+    			{
+        			PID_Clear(&PID[0]);   // 清积分 + 输出 0
+        			break;                // output=0 → PWM_set 刹车
+    			}
 				// 内环：速度环计算
-				PID_Speed(&PID[0],5.0f,speed);
+				// 斜坡步长用 50（而非 5）：双环需要快速跟随位置环，
+				// 否则减速太慢，刹车距离过大 → 冲过目标后来回摆
+				PID_Speed(&PID[0],50.0f,speed);
             	PID_calculate(&PID[0]);
             	break;
+
+			//温度控制模式(0x04)
+			case MOTOR_MODE_TEMP:
+				// ① 温度请求必须放在最前面！
+				//    温度模式下速度由温度帧决定，刚进入时目标速度是 0，
+				//    下面的"零速刹车"会 break 出去；若把请求放在后面就永远发不出去（死锁）
+				{
+					static uint16_t temp_cnt = 0;
+					if (++temp_cnt >= 500)      // 500 × 10ms = 5 秒请求一次
+					{
+						temp_cnt = 0;
+						CAN_Send_Remote(CAN_ID_FB_TEMP_STATUS, 6);   // 请求温度
+					}
+				}
+
+				// ② 速度目标限幅
+				if (speed >  500.0f) speed =  500.0f;
+				if (speed < -500.0f) speed = -500.0f;
+
+				// ③ 目标为 0 且已经慢下来 → 直接刹车，不再做闭环
+    			if (fabsf(speed) < 1.0f && fabsf(PID[0].speed_now) < 5.0f)
+    			{
+        			PID_Clear(&PID[0]);   // 清积分 + 输出 0
+        			break;                // output=0 → PWM_set 刹车
+    			}
+
+				// ④ 速度环跟踪温度给出的目标速度
+				PID_Speed(&PID[0],5.0f,speed);
+				PID_calculate(&PID[0]);
+				break;
 
 			default:
             	PID[0].output = 0.0f;

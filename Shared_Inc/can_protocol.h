@@ -1,4 +1,4 @@
-﻿#ifndef __CAN_PROTOCOL_H
+#ifndef __CAN_PROTOCOL_H
 #define __CAN_PROTOCOL_H
 
 #include <stdint.h>
@@ -15,17 +15,10 @@
 #define CAN_ID_CMD_MOTOR_CHANGE    0x101u   // 电机换向（兼容新命名）
 #define CAN_ID_CMD_MOTOR_CONTROL   0x105u   // 电机控制指令
 
-// 远程动态微调 PID 参数, 通过 CAN 指令进行增减 幅度为0.01
-#define CAN_ID_CMD_PID_PSET        0x102u
-#define CAN_ID_CMD_PID_ISET        0x103u
-#define CAN_ID_CMD_PID_DSET        0x104u
-
-// 目标速度/位置及控制回路命令（兼容两侧定义）
-#define CAN_ID_CMD_TARGET_SPEED    0x108u
-#define CAN_ID_CMD_TARGET_POSITION 0x109u
-#define CAN_ID_CMD_SPEEDLOOP       0x10Au
-#define CAN_ID_CMD_POSITIONLOOP    0x10Bu
-#define CAN_ID_CMD_DOUBLELOOP      0x10Cu
+// 远程动态微调 PID 参数
+#define CAN_ID_CMD_PID_PSET     0x102   
+#define CAN_ID_CMD_PID_ISET     0x103   
+#define CAN_ID_CMD_PID_DSET     0x104   
 
 // 状态反馈类：电机板 -> 控制板 (中优先级: 0x200 ~ 0x2FF)
 #define CAN_ID_FB_MOTOR_STATE   0x201u   // 电机双环实时状态反馈（转速、位置、状态是否正常等）
@@ -42,6 +35,7 @@ typedef enum {
     MOTOR_MODE_SPEED      = 0x01u, // 速度闭环控制
     MOTOR_MODE_POSITION   = 0x02u, // 位置闭环控制
     MOTOR_MODE_POS_SPEED  = 0x03u, // 位置-速度双环控制
+    MOTOR_MODE_TEMP       = 0x04u  // 温度控制模式
 } MotorCtrlMode_e;
 
 // 系统告警与故障状态码（兼容两侧定义）
@@ -64,7 +58,7 @@ typedef enum {
 typedef struct {
     uint8_t  ctrl_mode;      // 控制模式 (可选 MotorCtrlMode_e)
     int16_t  target_speed;   // 目标转速 (单位: RPM，带符号表示正反向)
-    int32_t  target_pos;     // 目标位置 (单位: 编码器脉冲计数)
+    int32_t  target_pos;     // 目标位置 (单位: 度，带符号表示正反向)
     uint8_t  cmd_seq;        // 命令序号/校验计数
 } CanMsg_MotorCmd_t;
 
@@ -73,10 +67,10 @@ typedef struct {
  * @note  总长: 1 + 2 + 4 + 1 = 8 Bytes
  */
 typedef struct {
-    uint8_t  current_mode;   // 当前实时运行模式
-    int16_t  actual_speed;   // 当前实时转速 (RPM)
-    int32_t  actual_pos;     // 当前实时累计位置 (编码器脉冲计数)
-    uint8_t  error_code;     // 电机故障编码 (可选 SystemError_e)
+    uint8_t  current_mode;   // 当前实际运行模式
+    int16_t  actual_speed;   // 当前实际转速 (RPM)
+    int32_t  actual_pos;     // 当前实际累计位置 
+    uint8_t  error_code;     // 电机端故障码 (参考 SystemError_e)
 } CanMsg_MotorFb_t;
 
 /**
