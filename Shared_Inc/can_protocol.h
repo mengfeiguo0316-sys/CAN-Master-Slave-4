@@ -35,6 +35,7 @@ typedef enum {
     MOTOR_MODE_SPEED      = 0x01u, // 速度闭环控制
     MOTOR_MODE_POSITION   = 0x02u, // 位置闭环控制
     MOTOR_MODE_POS_SPEED  = 0x03u, // 位置-速度双环控制
+    MOTOR_MODE_TEMP       = 0x04u  // 温度控制模式
 } MotorCtrlMode_e;
 
 // 系统告警与故障状态码（兼容两侧定义）
@@ -57,7 +58,7 @@ typedef enum {
 typedef struct {
     uint8_t  ctrl_mode;      // 控制模式 (可选 MotorCtrlMode_e)
     int16_t  target_speed;   // 目标转速 (单位: RPM，带符号表示正反向)
-    int32_t  target_pos;     // 目标位置 (单位: 编码器脉冲计数)
+    int32_t  target_pos;     // 目标位置 (单位: 度，带符号表示正反向)
     uint8_t  cmd_seq;        // 命令序号/校验计数
 } CanMsg_MotorCmd_t;
 

@@ -22,6 +22,20 @@
 
 /* USER CODE BEGIN 0 */
 
+/* USER CODE BEGIN 0 */
+
+/* ── 位置目标语义开关 ──────────────────────────────────────────────
+ * 1 = 增量模式：每次收到 0x105 的 target_pos，都在当前目标上累加
+ *     → 每次发 414(180°) 就再转 180°，主节点不用记当前位置
+ * 0 = 绝对模式：target_pos 就是"上电后第 N 个脉冲"的绝对位置
+ *     → 同一帧发第二次不会动（已经在目标点）
+ *
+ * 注意：增量模式下，主节点如果想"回到起点"，要发足够大的反向增量，
+ *       而不能发 0（发 0 表示"不移动"）。
+ * ───────────────────────────────────────────────────────────────── */
+#define POS_TARGET_RELATIVE   1
+
+
 /* USER CODE END 0 */
 
 CAN_HandleTypeDef hcan;
@@ -46,7 +60,7 @@ void MX_CAN_Init(void)
   hcan.Init.TimeTriggeredMode = DISABLE;
   hcan.Init.AutoBusOff = ENABLE;
   hcan.Init.AutoWakeUp = ENABLE;
-  hcan.Init.AutoRetransmission = DISABLE;
+  hcan.Init.AutoRetransmission = ENABLE;
   hcan.Init.ReceiveFifoLocked = DISABLE;
   hcan.Init.TransmitFifoPriority = DISABLE;
   if (HAL_CAN_Init(&hcan) != HAL_OK)
@@ -54,7 +68,6 @@ void MX_CAN_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN CAN_Init 2 */
-  HAL_CAN_Start(&hcan);//使能
   HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING);//开启FIFO0收报中断
   CAN_ConfigInit();//初始化
 
@@ -259,6 +272,7 @@ void CAN_Rx_Process(void)
       //电机换向指令(0x101)  
       case CAN_ID_CMD_MOTOR_CD:
         g_target_speed = -g_target_speed; // 目标速度直接取反实现换向
+        g_target_pos = -g_target_pos;     // 目标位置取反
         break;
 
       //————————————————PID参数调节————————————————//
@@ -276,51 +290,89 @@ void CAN_Rx_Process(void)
         memcpy(&PID[0].Kd, &CAN_RxData[0], sizeof(float));
         break;
 
-      //————————————————电机速度/位置设置————————————————//
-      //设置目标速度(0x108)
-      case CAN_ID_CMD_TARGET_SPEED:
+      //————————————————电机控制设置(0x105)————————————————//
+      // 协议 CanMsg_MotorCmd_t (8 字节):
+      //   [0]    ctrl_mode     控制模式 
+      //   [1..2] target_speed  目标转速 
+      //   [3..6] target_pos    目标位置 
+      //   [7]    cmd_seq       命令序号
+      case CAN_ID_CMD_MOTOR_CONTROL:
       {
-        int16_t v;
-        if (CAN_RxHeader.DLC < sizeof(v)) break; // 确保数据长度足够
-        memcpy(&v, &CAN_RxData[0], sizeof(v));
-        g_target_speed = (float)v;// 将接收到的 int16_t 转速值转换为 float 并存储
-        break;
-      } 
-      //设置目标位置(0x109)
-      case CAN_ID_CMD_TARGET_POSITION:
-      {
-        int32_t v;
-        if (CAN_RxHeader.DLC < sizeof(v)) break; // 确保数据长度足够
-        memcpy(&v, &CAN_RxData[0], sizeof(v));
-        g_target_pos = v;// 将接收到的 int32_t 位置值转换为 int32_t 并存储
+        if (CAN_RxHeader.DLC < 8) break;          // 整个结构体必须完整，防止读到残留
+
+        uint8_t mode = CAN_RxData[0];
+        if (mode > MOTOR_MODE_TEMP) break;        // 非法模式：整帧忽略
+
+        //切换控制模式
+        switch (mode)
+        {
+          //停机(急停)模式
+          case MOTOR_MODE_STOP:
+            g_motor_mode = MOTOR_MODE_STOP;
+            PID_Clear(&PID[0]);
+            break;
+          //速度环控制
+          case MOTOR_MODE_SPEED:
+            if (g_motor_mode != MOTOR_MODE_SPEED) PID_Clear(&PID[0]);
+            g_motor_mode = MOTOR_MODE_SPEED;
+            break;
+          //位置环控制
+          case MOTOR_MODE_POSITION:
+            if (g_motor_mode != MOTOR_MODE_POSITION) PID_Clear(&PID[0]);
+            g_motor_mode = MOTOR_MODE_POSITION;
+            break;
+          //位置-速度双环控制
+          case MOTOR_MODE_POS_SPEED:
+            if (g_motor_mode != MOTOR_MODE_POS_SPEED) PID_Clear(&PID[0]);
+            g_motor_mode = MOTOR_MODE_POS_SPEED;
+            break;
+          //温度控制模式
+          case MOTOR_MODE_TEMP:
+            if (g_motor_mode != MOTOR_MODE_TEMP) PID_Clear(&PID[0]);
+            g_motor_mode = MOTOR_MODE_TEMP;
+            break;
+
+          default:
+            break;
+        }
+
+        //停机模式只刹车，不再更新目标值
+        if (g_motor_mode == MOTOR_MODE_STOP) break;
+
+        //解析目标值
+        {
+          int16_t spd;
+          int32_t pos;
+
+          memcpy(&spd, &CAN_RxData[1], sizeof(spd));  // 速度: [1..2]
+          memcpy(&pos, &CAN_RxData[3], sizeof(pos));  // 位置: [3..6]
+
+          g_target_speed = (float)spd;
+
+          /* 位置目标语义可切换：
+           *   POS_TARGET_RELATIVE = 1  →  增量：每次发同一帧都再前进这么多
+           *                                例如每次发 414(180°) 就再转 180°
+           *   POS_TARGET_RELATIVE = 0  →  绝对：转到"上电后第 N 个脉冲"的位置
+           *                                同一帧发第二次不会动（已经在目标点）
+           */
+          if (POS_TARGET_RELATIVE)
+          {
+            g_target_pos += (float)pos * 360.0f / Circlemax;
+          }
+          else
+          {
+            g_target_pos  = (float)pos * 360.0f / Circlemax;
+          }
+        }
         break;
       }
-      //————————————————电机控制模式切换————————————————//
-      //速度环控制(0x10A)
-      case CAN_ID_CMD_SPEEDLOOP:
-        if (g_motor_mode != MOTOR_MODE_SPEED) PID_Clear(&PID[0]);
-        g_motor_mode = MOTOR_MODE_SPEED;     // 切换为 0x01 单速度环
-        break;
-
-      //位置环控制(0x10B)
-      case CAN_ID_CMD_POSITIONLOOP:
-        if (g_motor_mode != MOTOR_MODE_POSITION) PID_Clear(&PID[0]);
-        g_motor_mode = MOTOR_MODE_POSITION;  // 切换为 0x02 单位置环
-        break;
-
-      //位置-速度双环控制(0x10C)
-      case CAN_ID_CMD_DOUBLELOOP:
-        if (g_motor_mode != MOTOR_MODE_POS_SPEED) PID_Clear(&PID[0]);
-        g_motor_mode = MOTOR_MODE_POS_SPEED; // 切换为 0x03 双环控制
-        break;
 
       //————————————————温度数据解析————————————————//
       //温度数据反馈(0x301)
       case CAN_ID_FB_TEMP_STATUS:
       {
+        if(g_motor_mode != MOTOR_MODE_TEMP) break; // 只有在温度控制模式下才处理温度数据
         if (CAN_RxHeader.DLC < 6) break;
-        if (g_motor_mode != MOTOR_MODE_SPEED) PID_Clear(&PID[0]);
-        g_motor_mode = MOTOR_MODE_SPEED;     // 切换为 0x01 单速度环
         uint8_t temp = CAN_RxData[4];
         if (temp == 10)
         {
