@@ -11,7 +11,8 @@ set(MX_Defines_Syms
 # STM32CubeMX generated include paths
 set(MX_Include_Dirs
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Inc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../APP/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../User/APP/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../User/BSP/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32F1xx_HAL_Driver/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/CMSIS/Device/ST/STM32F1xx/Include
@@ -29,11 +30,12 @@ set(MX_Application_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/sysmem.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/syscalls.c
     # ---- 应用层（自己写的，放在 APP/）----
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../APP/Src/can.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../APP/Src/Getspeed.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../APP/Src/loop.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../APP/Src/PID.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../APP/Src/uart_report.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../User/APP/Src/Getspeed.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../User/APP/Src/loop.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../User/APP/Src/PID.c
+    # ---- BSP 层（外设驱动，放在 BSP/）----
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../User/BSP/Src/can.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../User/BSP/Src/uart_report.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../startup_stm32f103xe.s
 )
 
